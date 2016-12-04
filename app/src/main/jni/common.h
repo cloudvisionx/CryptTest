@@ -7,6 +7,9 @@
 
 #include <string>
 #include<android/log.h>
+#include <string.h>
+#include <vector>
+#include <memory>
 
 
 #define LOG_TAG "cydia"

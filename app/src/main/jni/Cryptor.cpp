@@ -17,27 +17,32 @@ int Base64Cryptor::decrypt(const char *src, std::string &dest) {
 
 int Base64Cryptor::encrypt(const char *src, std::string &dest) {
     size_t len=strlen((src));
-    codec_base64_encode(src,len,dest);
+    codec_base64_encode((const unsigned char *)src,len,dest);
     return 1;
 }
 
 int AESCryptor::encrypt(const char *src, std::string &dest) {
-    int len=strlen((src));
-    int encryptedLen=(len/16 + 1) * 16;
-    char encryptedCStr[encryptedLen*2];
-    int result=codec_aes_encrypt(src,mKey,encryptedCStr,encryptedLen);
-    if(result=-1){
-
+    vector<unsigned char> encryptedVec(0);
+    int result=codec_aes_encrypt(src,mKey,encryptedVec);
+    if(result==-1){
+        LOGE("aes_encrypt fail");
+        return -1;
     }
-    codec_base64_encode(encryptedCStr,encryptedLen,dest);
+    result=codec_base64_encode(encryptedVec,dest);
+    if(result==-1){
+        LOGE("base64_encode fail");
+        return -1;
+    }
     return 1;
 }
 
 int AESCryptor::decrypt(const char *src, std::string &dest) {
     int len=strlen(src);
-    size_t decodedLen=calcDecodeLength(src);
-    unsigned char decodedCStr[len*2];
-    codec_base64_decode(src,len,decodedCStr);
+//    size_t decodedLen=calcDecodeLength(src);
+//    unsigned char decodedCStr[len];
+    vector<unsigned char> vec(0);
+    codec_base64_decode(src,len,vec);
+
     return codec_aes_decrypt(decodedCStr,decodedLen,mKey,dest);
 }
 

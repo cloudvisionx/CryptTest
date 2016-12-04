@@ -8,7 +8,7 @@
  * BASE64编码
  *
  */
- int codec_base64_encode(const char *bs,size_t len ,std::string& finalDst)
+ int codec_base64_encode(const unsigned char *bs,size_t len ,std::string& finalDst)
 {
     BIO *b64 = BIO_new(BIO_f_base64());
     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);//不换行
@@ -28,6 +28,32 @@
     return 1;
 }
 
+/*
+ * 需自行确保空间足够
+ */
+void copyVec2array(const vector<unsigned char> &src,unsigned char* a){
+    size_t len=src.size();
+    auto begin=src.begin();
+    auto end=src.end();
+    int index=0;
+    while(begin!=end){
+        a[index]=*begin;
+        begin++;
+        index++;
+    }
+}
+
+int codec_base64_encode(const vector<unsigned char> &src,string &dest){
+    size_t len=src.size();
+    unsigned char tmp[len];
+    copyVec2array(src,tmp);
+    return codec_base64_encode(tmp,len,dest);
+}
+
+
+
+
+
 int calcDecodeLength(const char* b64input) { //Calculates the length of a decoded string
     size_t len = strlen(b64input),
             padding = 0;
@@ -44,15 +70,18 @@ int calcDecodeLength(const char* b64input) { //Calculates the length of a decode
  * BASE64解码
  *
  */
- int codec_base64_decode(const char *cs,size_t decryptedLen,unsigned char* dst)
+ int codec_base64_decode(const char *cs,size_t len,vector<unsigned char> finalDst)
 {
-
+    size_t decodedLen=calcDecodeLength(cs);
+    unsigned char dst[len];
     BIO *b64 = BIO_new(BIO_f_base64());
     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
-    BIO *bio = BIO_new_mem_buf((void *)cs, decryptedLen);
+    BIO *bio = BIO_new_mem_buf((void *)cs, len);
     bio = BIO_push(b64, bio);
-    int n = BIO_read(bio, dst, decryptedLen);
+    //int n = BIO_read(bio, dst, len);
+    int n = BIO_read(bio, dst, decodedLen);
     BIO_free_all(bio);
+    finalDst.insert(finalDst.begin(),dst,dst+decodedLen);
     return 1;
 }
 
@@ -100,9 +129,10 @@ int calcDecodeLength(const char* b64input) { //Calculates the length of a decode
  * AES-ECB-PKCS5Padding加密
  *
  */
- int codec_aes_encrypt(const char *src,char *key,char* dst,size_t encryptedLen)
+ int codec_aes_encrypt(const char *src,const char *key,vector<unsigned char>& encryptedVec)
 {
     size_t len=strlen(src);
+    size_t encryptedLen=(len/16 + 1) * 16;
     EVP_CIPHER_CTX ctx;
     EVP_CIPHER_CTX_init(&ctx);
 
@@ -116,8 +146,8 @@ int calcDecodeLength(const char* b64input) { //Calculates the length of a decode
     }
 
     int dstn = encryptedLen, n, wn;
-    //char dst[dstn];
-    memset(dst, 0, dstn);//这里大小千万要注意，要不就清0过头了
+    unsigned char* dst=new unsigned char[encryptedLen*2];//分配在堆里，不和栈数据混在一起
+    memset(dst, 0, encryptedLen*2);//这里大小千万要注意，要不就清0过头了
 
     ret = EVP_EncryptUpdate(&ctx, (unsigned char *)dst, &wn, (const unsigned char *)src, len);
     if(ret != 1)
@@ -138,7 +168,9 @@ int calcDecodeLength(const char* b64input) { //Calculates the length of a decode
 
     EVP_CIPHER_CTX_cleanup(&ctx);
     n += wn;
-    dst[encryptedLen]=0;
+    //dst[encryptedLen]=0;这里不用了，前面都置0了
+    encryptedVec.insert(encryptedVec.begin(),dst,dst+n);
+    delete[] dst;//删除
     return 1;
 }
 
@@ -152,7 +184,7 @@ int calcDecodeLength(const char* b64input) { //Calculates the length of a decode
  * local bs = codec.base64_decode(src)
  * local dst = codec.aes_decrypt(bs, key)
  */
- int codec_aes_decrypt(const unsigned char *src,size_t len,char *key,std::string& finalDst)
+ int codec_aes_decrypt(vector<unsigned char>& src,size_t len,char *key,std::string& finalDst)
 {
 
 
