@@ -1,0 +1,62 @@
+
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 23
+    buildToolsVersion "23.0.3"
+    defaultConfig {
+        applicationId "com.oraclex.crypttest"
+        minSdkVersion 19
+        targetSdkVersion 23
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        externalNativeBuild {
+            ndkBuild {
+                //targets "native-lib"
+                //cppFlags "--std=c++11 -fexceptions -pthread -frtti"//这个就放mk里吧
+                abiFilters "armeabi-v7a"
+                //arguments "NDK_APPLICATION_MK:=src/main/jni/Application.mk"其实没啥用，优先的时option里设置的
+                //例如mk里设置了platform，但是build参数时会指定platform为minsdkversion，所以没啥用
+                //这里面可以设置其他选项
+
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+//            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            jniDebuggable true
+        }
+    }
+
+    externalNativeBuild {
+        ndkBuild {
+            path 'src/main/jni/Android.mk'//这样设置是不会设置application.mk的，缺少那个可不行
+        }
+    }
+
+    sourceSets.main {
+        // 如果不写(jni.srcDirs = ['src/main/jni/'])
+        // Android展示模式没有jni目录
+        // this file has been added after the last project sync with gradle
+        // 必须有值,如: 'src/main/jni/'
+        jni.srcDirs = ['src/main/jni/']
+        //jniLibs.srcDir "libs"
+    }
+
+}
+
+dependencies {
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
+    compile 'com.android.support:appcompat-v7:23.4.0'
+    testCompile 'junit:junit:4.12'
+}
